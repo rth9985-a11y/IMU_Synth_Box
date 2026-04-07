@@ -52,8 +52,7 @@ void setup() {
   waveform1.amplitude(0.5);
   waveform1.frequency(120);
 
-}
-
+} // DELETED A SPACE FOR GITHUB TEST!!!
 
 void loop() {
   frequency1 = frequencyPotRead();
