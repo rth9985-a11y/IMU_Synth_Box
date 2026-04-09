@@ -24,16 +24,20 @@ SecondOrderLPF::SecondOrderLPF()
       float x = block->data[i];
       // Difference equation
       float y = (b0 * x) + (b1 * x_prev) + (b2 * x_prev2) - (a1 * y_prev) - (a2 * y_prev2);
+      // Coefficients
       x_prev2 = x_prev1;
       x_prev1 = x_prev;
       y_prev2 = y_prev;
       y_prev = y;
       x_prev = x;
 
+      if (y > 32768.0f) y = 32768.0f;
+      else if (y < -32768.0f) y = -32768.0f;
+
       block->data[i] = (int16_t)y;
-      transmit(block);
-      release(block);
     }
+    transmit(block);
+    release(block);
   }
 
   // 

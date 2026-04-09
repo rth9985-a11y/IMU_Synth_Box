@@ -14,13 +14,13 @@ class SecondOrderLPF : public AudioStream{
 
   private:
     audio_block_t *inputQueueArray[1];
+    float q;
     float a1, a2, b0, b1, b2;
     float x_prev;
     float x_prev1;
     float x_prev2;
     float y_prev; 
     float y_prev2;
-    float q;
 };
 
 #endif

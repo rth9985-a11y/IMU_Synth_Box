@@ -13,7 +13,7 @@ void FirstOrderLPF::setCutoff(float fc, float fs) {
   float K = tanf((pi * fc) / fs);
   b0 = K / (1 + K);
   b1 = K / (1 + K);
-  a1 = (K - 1.0f) / (1.0f + K);  //GIT TEST
+  a1 = (K - 1.0f) / (1.0f + K);
 }
 
 void FirstOrderLPF::update(void) {
@@ -32,9 +32,3 @@ void FirstOrderLPF::update(void) {
   release(block);
 }
 
-// private:
-//   audio_block_t *inputQueueArray[1];
-//   float b0, b1, a1;
-//   float x_prev;
-//   float y_prev;
-// };
