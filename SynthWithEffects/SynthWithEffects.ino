@@ -52,7 +52,7 @@ void setup() {
   waveform1.amplitude(0.5);
   waveform1.frequency(120);
 
-} // DELETED A SPACE FOR GITHUB TEST!!!
+}
 
 void loop() {
   frequency1 = frequencyPotRead();
@@ -68,7 +68,6 @@ void loop() {
     Serial.println(gain1);
     prevTime = millis();
   }
- 
 }
 
 float frequencyPotRead(){
@@ -81,7 +80,7 @@ float gainPotRead(){
   return map(rawData, 0, 1023, 0, 3);
 }
 
+// FSCALE !!! for log 
 
-
-
+// SSD 1306
 
