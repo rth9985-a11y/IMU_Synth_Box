@@ -1,19 +1,27 @@
+#if 0
 #include "SecondOrderLPF.h"
 #include "Wire.h"
 #include "math.h"
 
 SecondOrderLPF::SecondOrderLPF()
-  : AudioStream(1, inputQueueArray), q(1.41421356237), a1(0), a2(0), b0(0), b1(0), b2(0), x_prev(0), x_prev1(0), x_prev2(0), y_prev(0), y_prev2(0) {}
+  : AudioStream(1, inputQueueArray), q(0.707), a1(0), a2(0), b0(0), b1(0), b2(0), x_prev1(0), x_prev2(0), y_prev(0), y_prev2(0) {}
 
   void SecondOrderLPF::setCutoff(float Fc, float Fs){
-    // q = sqrt(2)
-    float ff = Fc / Fs;
-    float n = 1.0f/tanf(PI * ff);
-    b0 = 1 / (1 + (q * n) + (n * n));
-    b1 = 2 * b0;
-    b2 = b0;
-    a1 = (2 * b0) * ((n * n) - 1.0f);
-    a2 = (-b0) * (1.0f - (q * n) + (n * n));
+
+    if (Fc >= 20000) Fc = 20000;
+    if (Fc <= 20) Fc = 20;
+
+    float omega = 2.0f * PI * Fc / Fs;
+    float sn = sinf(omega);
+    float cs = cosf(omega);
+    float alpha = sn / (2.0f * Q);
+    float a0 = 1.0f + alpha;
+
+    b0 = ((1.0f - cs) / 2.0f) / a0;
+    b1 = (1.0f - cs) / a0;
+    b2 = ((1.0f - cs) / 2.0f) / a0;
+    a1 = (-2.0f * cs) / a0;
+    a2 = (1.0f - alpha) / a0;
   }
 
   void SecondOrderLPF::update(void){
@@ -22,11 +30,13 @@ SecondOrderLPF::SecondOrderLPF()
 
     for (int i = 0; i < 128; i++){
       float x = block->data[i];
+
       // Difference equation
-      float y = (b0 * x) + (b1 * x_prev) + (b2 * x_prev2) - (a1 * y_prev) - (a2 * y_prev2);
-      // Coefficients
+      float y = (b0 * x) + (b1 * x_prev1) + (b2 * x_prev2) - (a1 * y_prev) - (a2 * y_prev2);
+
+      // State shifts
       x_prev2 = x_prev1;
-      x_prev1 = x_prev;
+      x_prev1 = x;
       y_prev2 = y_prev;
       y_prev = y;
       x_prev = x;
@@ -39,5 +49,5 @@ SecondOrderLPF::SecondOrderLPF()
     transmit(block);
     release(block);
   }
-
+#endif
   // 
