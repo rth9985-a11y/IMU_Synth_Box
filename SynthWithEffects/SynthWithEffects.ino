@@ -186,6 +186,25 @@ float lfoDepth = 0.0f;
 
 unsigned long tremTime = 0;
 
+struct pitchMaps{
+  const float osc1Left = 174.61;
+  const float osc2Left = 196.00;
+  const float osc3Left = 220.00;
+  const float osc4Left = 43.654;
+
+  const float osc1right = 196.0;
+  const float osc2right = 220.0;
+  const float osc3right = 261.63;
+  const float osc4right = 43.654;
+
+  const float osc1Center = 196.0;
+  const float osc2Center = 220.0;
+  const float osc3Center = 246.94;
+  const float osc4Center = 48.999;
+};
+
+struct pitchMaps pitch;
+
 void loop() {
   unsigned long currentTime = millis();
   sensors_event_t accel;
@@ -204,18 +223,18 @@ void loop() {
   if (currentTime - prevTime1 >= 40){
     if (accelXPrint <= 0) {
       // maybe try just an octave spread of the 1 chord?
-      freq1 = fmap(accelXPrint, -100.0, 0.0, 174.61, 196.0);
-      freq2 = fmap(accelXPrint, -100.0, 0.0, 196.00, 220.0);
-      freq3 = fmap(accelXPrint, -100.0, 0.0, 220.00, 246.94);
-      freq4 = fmap(accelXPrint, -100.0, 0.0, 43.654, 48.999);
+      freq1 = fmap(accelXPrint, -100.0, 0.0, pitch.osc1Left, pitch.osc1Center);
+      freq2 = fmap(accelXPrint, -100.0, 0.0, pitch.osc2Left, pitch.osc2Center);
+      freq3 = fmap(accelXPrint, -100.0, 0.0, pitch.osc3Left, pitch.osc3Center);
+      freq4 = fmap(accelXPrint, -100.0, 0.0, pitch.osc4Left, pitch.osc4Center);
       waveform1.frequency(freq1);
       waveform2.frequency(freq2);
       waveform3.frequency(freq3);
       waveform4.frequency(freq4);
     }
     if (accelXPrint > 0){
-      freq3 = fmap(accelXPrint, 0, 100, 246.94, 261.63);
-      freq4 = fmap(accelXPrint, 0, 100, 48.999, 43.654);
+      freq3 = fmap(accelXPrint, 0, 100, pitch.osc3Center, pitch.osc3right);
+      freq4 = fmap(accelXPrint, 0, 100, pitch.osc4Center, pitch.osc4right);
       waveform3.frequency(freq3);
       waveform4.frequency(freq4);
     }
@@ -232,16 +251,16 @@ void loop() {
     }
 
     if (accelYPrint > 20){
-      lfoFreq = fmap(accelYPrint, 0.0, 100.0, 0.0, 5.0);
+      lfoFreq = fmap(accelYPrint, 0.0, 100.0, 0.0, 6.0);
       // lfoDepth = fmap(accelYPrint, 0.0, 100.0, 0.5, 0.1);
       
     }
     else {
       lfoFreq = 0;
-      
+      lfoDepth = 1;
     }
     lfo.frequency(lfoFreq);
-    // lfo.amplitude(lfoDepth);
+    lfo.amplitude(lfoDepth);
 
     prevTime1 = currentTime;
   }
