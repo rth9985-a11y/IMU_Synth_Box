@@ -9,7 +9,6 @@
 #include <Adafruit_ISM330DHCX.h>
 #include "FirstOrderLPF.h"
 
-
 // IMU Defines + Constructor
 #define LSM_CS 10
 Adafruit_ISM330DHCX ism330dhcx;
@@ -22,6 +21,7 @@ Adafruit_ISM330DHCX ism330dhcx;
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 #define MASTER_VOLUME 27
+#define GRANULAR_MEMORY_SIZE 25600
 
 // -----------------------------------------------
 // Class Declarations + Virtual Patching
@@ -41,9 +41,9 @@ AudioConnection           patchCord1(waveform1, 0, Mixer1, 0);
 AudioConnection           patchCord2(waveform2, 0, Mixer1, 1);
 AudioConnection           patchCord3(waveform3, 0, Mixer1, 2);
 AudioConnection           patchCord4(waveform4, 0, Mixer1, 3);
-AudioConnection           patchCord5(Mixer1, 0, FirstOrderLPF1, 0);
-AudioConnection           patchCord6(FirstOrderLPF1, 0, i2s1, 0);
-AudioConnection           patchCord7(FirstOrderLPF1, 0, i2s1, 1);
+AudioConnection           patchCord6(Mixer1, 0, FirstOrderLPF1, 0);
+AudioConnection           patchCord7(FirstOrderLPF1, 0, i2s1, 0);
+AudioConnection           patchCord8(FirstOrderLPF1, 0, i2s1, 1);
 
 // -----------------------------------------------
 // Float map — Arduino's map() is integer only
@@ -131,10 +131,10 @@ void setup() {
   waveform2.begin(WAVEFORM_SAWTOOTH);
   waveform3.begin(WAVEFORM_SAWTOOTH);
   waveform4.begin(WAVEFORM_SAWTOOTH);
-  waveform1.amplitude(0.25);
-  waveform2.amplitude(0.25);
-  waveform3.amplitude(0.25);
-  waveform4.amplitude(0.25);
+  waveform1.amplitude(0.22);
+  waveform2.amplitude(0.22);
+  waveform3.amplitude(0.22);
+  waveform4.amplitude(0.33);
   waveform1.frequency(196.0);
   waveform2.frequency(220.00);
   waveform3.frequency(246.94);
@@ -159,6 +159,7 @@ int accelYVisual = 0;
 
 unsigned long prevTime = 0;
 unsigned long prevTime1 = 0;
+unsigned long prevTime2 = 0;
 
 float masterVol = 0;
 
@@ -171,6 +172,9 @@ float freq1 = 196.0f;
 float freq2 = 246.94f;
 float freq3 = 293.99f;
 float freq4 = 97.999f;
+
+unsigned long tremTime = 0;
+
 
 void loop() {
   unsigned long currentTime = millis();
@@ -187,34 +191,37 @@ void loop() {
   accelXPrint = -accelXPrint; // Reverse sign to make it work with screen orientation
 
   // Control update
-  // waveform1.frequency(196.0);
-  // waveform2.frequency(220.00);
-  // waveform3.frequency(246.94);
   if (currentTime - prevTime1 >= 40){
     if (accelXPrint <= 0) {
-      freq1 = fmap(accelXPrint, -100.0, 0.0, 185.0, 196.0);
-      freq2 = fmap(accelXPrint, -100.0, 0.0, 220.0, 220.0);
+      // maybe try just an octave spread of the 1 chord?
+      freq1 = fmap(accelXPrint, -100.0, 0.0, 174.61, 196.0);
+      freq2 = fmap(accelXPrint, -100.0, 0.0, 196.00, 220.0);
+      freq3 = fmap(accelXPrint, -100.0, 0.0, 220.00, 246.94);
+      freq4 = fmap(accelXPrint, -100.0, 0.0, 43.654, 48.999);
       waveform1.frequency(freq1);
-    }
-    // 246.94 --> 261.63
-    // 293.99 --> 311.13
-    if (accelXPrint > 0){
-      freq1 = fmap(accelXPrint, 0, 100, 196.0, 261.63);
-      waveform1.frequency(freq1);
-      freq2 = fmap(accelXPrint, 0, 100, 220.00, 293.67);
       waveform2.frequency(freq2);
-      freq3 = fmap(accelXPrint, 0, 100, 246.94, 329.63);
       waveform3.frequency(freq3);
+      waveform4.frequency(freq4);
     }
+    if (accelXPrint > 0){
+      freq3 = fmap(accelXPrint, 0, 100, 246.94, 261.63);
+      freq4 = fmap(accelXPrint, 0, 100, 48.999, 43.654);
+      waveform3.frequency(freq3);
+      waveform4.frequency(freq4);
+    }
+
     masterVol = map((float) analogRead(MASTER_VOLUME), 0.0f, 1023.0f, 0.0f, 1.0f);
-    
     sgtl5000_1.volume(masterVol);
 
     fc1Target = fmap(accelYRaw, -10.0f, 10.0f, 150.0f, 10000.0f);
     fc1 += FC_SMOOTH * (fc1Target - fc1);
     FirstOrderLPF1.setCutoff(fc1, 44100.0f);
-  
-    prevTime1 = currentTime; // worked fine without this??? What???
+
+    if (accelXPrint < 0){
+      tremTime = fmap(accelXPrint, 0, 100, 2000, 250);
+    }
+
+    prevTime1 = currentTime;
   }
 
   // OLED UPDATE
