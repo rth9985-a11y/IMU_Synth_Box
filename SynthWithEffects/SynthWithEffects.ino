@@ -30,6 +30,8 @@ AudioSynthWaveform        waveform1;
 AudioSynthWaveform        waveform2;
 AudioSynthWaveform        waveform3;
 AudioSynthWaveform        waveform4;
+AudioSynthWaveform        lfo;
+AudioEffectMultiply       vca;
 FirstOrderLPF             FirstOrderLPF1;
 AudioMixer4               Mixer1;
 AudioOutputI2S            i2s1;
@@ -37,13 +39,15 @@ AudioOutputAnalogStereo   dacs1;
 AudioControlSGTL5000      sgtl5000_1;
 
 // Patches
+AudioConnection           patchCord0(lfo, 0, vca, 1);
 AudioConnection           patchCord1(waveform1, 0, Mixer1, 0);
 AudioConnection           patchCord2(waveform2, 0, Mixer1, 1);
 AudioConnection           patchCord3(waveform3, 0, Mixer1, 2);
 AudioConnection           patchCord4(waveform4, 0, Mixer1, 3);
-AudioConnection           patchCord6(Mixer1, 0, FirstOrderLPF1, 0);
-AudioConnection           patchCord7(FirstOrderLPF1, 0, i2s1, 0);
-AudioConnection           patchCord8(FirstOrderLPF1, 0, i2s1, 1);
+AudioConnection           patchCord6(Mixer1, 0, vca, 0);
+AudioConnection           patchCord7(vca, 0, FirstOrderLPF1, 0);
+AudioConnection           patchCord8(FirstOrderLPF1, 0, i2s1, 0);
+AudioConnection           patchCord9(FirstOrderLPF1, 0, i2s1, 1);
 
 // -----------------------------------------------
 // Float map — Arduino's map() is integer only
@@ -131,14 +135,18 @@ void setup() {
   waveform2.begin(WAVEFORM_SAWTOOTH);
   waveform3.begin(WAVEFORM_SAWTOOTH);
   waveform4.begin(WAVEFORM_SAWTOOTH);
+  lfo.begin(WAVEFORM_SINE);
   waveform1.amplitude(0.22);
   waveform2.amplitude(0.22);
   waveform3.amplitude(0.22);
   waveform4.amplitude(0.33);
+  lfo.amplitude(0.1);
   waveform1.frequency(196.0);
   waveform2.frequency(220.00);
   waveform3.frequency(246.94);
   waveform4.frequency(98.0);
+  lfo.frequency(5.0);
+  
 }
 
 // Loop variables 
@@ -163,18 +171,20 @@ unsigned long prevTime2 = 0;
 
 float masterVol = 0;
 
-// Smoothing values for filter control
+// Smoothing values for pitch control
 float fc1Target = 1000.0f;
 float fc1 = 1000.0f;
-const float FC_SMOOTH = 0.085f;
+float FC_SMOOTH = 0.085f;
 
 float freq1 = 196.0f;
 float freq2 = 246.94f;
 float freq3 = 293.99f;
 float freq4 = 97.999f;
 
-unsigned long tremTime = 0;
+float lfoFreq = 0.0f;
+float lfoDepth = 0.0f;
 
+unsigned long tremTime = 0;
 
 void loop() {
   unsigned long currentTime = millis();
@@ -220,6 +230,18 @@ void loop() {
     if (accelXPrint < 0){
       tremTime = fmap(accelXPrint, 0, 100, 2000, 250);
     }
+
+    if (accelYPrint > 20){
+      lfoFreq = fmap(accelYPrint, 0.0, 100.0, 0.0, 5.0);
+      // lfoDepth = fmap(accelYPrint, 0.0, 100.0, 0.5, 0.1);
+      
+    }
+    else {
+      lfoFreq = 0;
+      
+    }
+    lfo.frequency(lfoFreq);
+    // lfo.amplitude(lfoDepth);
 
     prevTime1 = currentTime;
   }
