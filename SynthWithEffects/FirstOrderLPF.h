@@ -13,6 +13,7 @@ class FirstOrderLPF : public AudioStream {
     void update(void);
 
   private:
+    // Pointer to the audio array
     audio_block_t *inputQueueArray[1];
     float b0, b1, a1;
     float x_prev;

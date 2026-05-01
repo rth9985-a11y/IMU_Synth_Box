@@ -62,7 +62,6 @@ float mapIMU(float raw, float out_min, float out_max) {
   return fmap(raw, -10.0f, 10.0f, out_min, out_max);
 }
 
-
 // -----------------------------------------------
 // Setup And Loop
 // -----------------------------------------------
@@ -161,14 +160,12 @@ int accelYPrint = 0;
 int accelXVisual = 0;
 int accelYVisual = 0;
 
-// float gyroX = 0;
-// float gyroY = 0;
-// float gyroZ = 0;
-
+// Different time states
 unsigned long prevTime = 0;
 unsigned long prevTime1 = 0;
 unsigned long prevTime2 = 0;
 
+// Master vol for DAC
 float masterVol = 0;
 
 // Smoothing values for pitch control
@@ -176,16 +173,19 @@ float fc1Target = 1000.0f;
 float fc1 = 1000.0f;
 float FC_SMOOTH = 0.085f;
 
+// Current freqnencies for 
 float freq1 = 196.0f;
 float freq2 = 246.94f;
 float freq3 = 293.99f;
 float freq4 = 97.999f;
 
+// Lfo parameters
 float lfoFreq = 0.0f;
 float lfoDepth = 0.0f;
 
-unsigned long tremTime = 0;
+// unsigned long tremTime = 0;
 
+// All pitch targets for each position
 struct pitchMaps{
   const float osc1Left = 174.61;
   const float osc2Left = 196.00;
@@ -207,22 +207,24 @@ struct pitchMaps pitch;
 
 void loop() {
   unsigned long currentTime = millis();
+
+  // grad data from IMU
   sensors_event_t accel;
   sensors_event_t gyro;
   sensors_event_t temp;
   ism330dhcx.getEvent(&accel, &gyro, &temp);
-
   accelXRaw = accel.acceleration.x;
   accelYRaw = accel.acceleration.y;
 
+  // Map/normalize IMU data
   accelXPrint = (int) mapIMU(accelXRaw, -100, 100);
   accelYPrint = (int) mapIMU(accelYRaw, -100, 100);
   accelXPrint = -accelXPrint; // Reverse sign to make it work with screen orientation
 
-  // Control update
+  // Change frequencies of the oscilaltors every 40Ms
   if (currentTime - prevTime1 >= 40){
+    // If tilted to the left, map in this direction
     if (accelXPrint <= 0) {
-      // maybe try just an octave spread of the 1 chord?
       freq1 = fmap(accelXPrint, -100.0, 0.0, pitch.osc1Left, pitch.osc1Center);
       freq2 = fmap(accelXPrint, -100.0, 0.0, pitch.osc2Left, pitch.osc2Center);
       freq3 = fmap(accelXPrint, -100.0, 0.0, pitch.osc3Left, pitch.osc3Center);
@@ -232,6 +234,7 @@ void loop() {
       waveform3.frequency(freq3);
       waveform4.frequency(freq4);
     }
+    // If tilted to the right, map in this direction
     if (accelXPrint > 0){
       freq3 = fmap(accelXPrint, 0, 100, pitch.osc3Center, pitch.osc3right);
       freq4 = fmap(accelXPrint, 0, 100, pitch.osc4Center, pitch.osc4right);
@@ -239,39 +242,41 @@ void loop() {
       waveform4.frequency(freq4);
     }
 
+    // Adjust master volume
     masterVol = map((float) analogRead(MASTER_VOLUME), 0.0f, 1023.0f, 0.0f, 1.0f);
     sgtl5000_1.volume(masterVol);
 
+    // Smooth the IMU input for the filter data
     fc1Target = fmap(accelYRaw, -10.0f, 10.0f, 150.0f, 10000.0f);
     fc1 += FC_SMOOTH * (fc1Target - fc1);
     FirstOrderLPF1.setCutoff(fc1, 44100.0f);
 
-    if (accelXPrint < 0){
-      tremTime = fmap(accelXPrint, 0, 100, 2000, 250);
-    }
-
+    // If tiled back begin the tremolo
     if (accelYPrint > 20){
       lfoFreq = fmap(accelYPrint, 0.0, 100.0, 0.0, 6.0);
       // lfoDepth = fmap(accelYPrint, 0.0, 100.0, 0.5, 0.1);
       
     }
+    // Update state if not tremolo
     else {
       lfoFreq = 0;
       lfoDepth = 1;
     }
+    // Set trem values
     lfo.frequency(lfoFreq);
     lfo.amplitude(lfoDepth);
-
     prevTime1 = currentTime;
   }
 
   // OLED UPDATE
-  if (currentTime - prevTime >= 50) {
+  if (currentTime - prevTime >= 34) {
     updateDisplay();
     prevTime = currentTime;
   }
 }
 
+// Updates position box so that the pizel moves to where the IMU values are 
+// and a black box fills after for every frame to remove previous output
 void updatePositionBox(int pitchVal, int rollVal){
   display.fillRect(82, 5, 35, 35, BLACK);
   int mappedPitch = map(accelYPrint, -100, 100, 5, 40);
@@ -279,6 +284,8 @@ void updatePositionBox(int pitchVal, int rollVal){
   display.drawPixel(mappedRoll, mappedPitch, WHITE);
 }
 
+// Updates the values of the deplay overlaying a black box so that the numbers do not stack
+// on top of eachother
 void updateDisplay(){
     display.fillRect(50, 1, 30, 43, BLACK);
     // Pitch (positional, not musical)
